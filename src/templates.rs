@@ -870,10 +870,10 @@ fn expression_to_component(expression: &ebnf::Expression, description: &config::
 
 pub fn render_all(config: config::Config){
     let output_folder = config.dest.to_str().unwrap();
-    let render_file = |name: &str, ext: &str, context: &Context|{
+    let render_file = |name: &str, context: &Context|{
       fs::write(
           &(output_folder.to_owned() + "/" + name),
-          TERA.render(&("".to_string() + name + "." + ext), context)
+          TERA.render(&("".to_string() + name), context)
               .unwrap(),
       )
       .expect("can't write to file");
@@ -934,16 +934,16 @@ pub fn render_all(config: config::Config){
     lib.insert("start_comp", &upper(&config.start));
     lib.insert("start", &config.start);
 
-    render_file("components","tsx", &component_context);
-    render_file("ast","ts", &ast_context);
-    render_file("visitor","ts", &visitor_context);
-    render_file("ast","css", &css);
-    render_file("focus","ts", &component_context);
-    render_file("lib","css", &component_context);
-    render_file("select","css", &component_context);
-    render_file("Select","tsx", &component_context);
-    render_file("VariableList","tsx", &component_context);
-    render_file("Terminal","tsx", &component_context);
-    render_file("Regex","tsx", &component_context);
-    render_file("lib","tsx", &lib);
+    render_file("components.tsx", &component_context);
+    render_file("ast.ts", &ast_context);
+    render_file("visitor.ts", &visitor_context);
+    render_file("ast.css", &css);
+    render_file("focus.ts", &component_context);
+    render_file("lib.css", &component_context);
+    render_file("select.css", &component_context);
+    render_file("Select.tsx", &component_context);
+    render_file("VariableList.tsx", &component_context);
+    render_file("Terminal.tsx", &component_context);
+    render_file("Regex.tsx", &component_context);
+    render_file("lib.tsx", &lib);
 }
