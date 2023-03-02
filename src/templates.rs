@@ -873,7 +873,7 @@ pub fn render_all(config: config::Config){
     let render_file = |name: &str, ext: &str, context: &Context|{
       fs::write(
           &(output_folder.to_owned() + "/" + name),
-          TERA.render(&("".to_string() + name + ext), context)
+          TERA.render(&("".to_string() + name + "." + ext), context)
               .unwrap(),
       )
       .expect("can't write to file");
