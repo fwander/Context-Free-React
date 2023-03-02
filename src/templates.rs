@@ -6,7 +6,7 @@ use tera::{Tera, Context};
 use crate::config;
 
 pub static TERA: Lazy<Tera> = Lazy::new(|| {
-    let mut tera = match Tera::new("N.ignore") {
+    let mut tera = match Tera::new("*(N)") {
         Ok(t) => t,
         Err(e) => {
             println!("Parsing error(s): {}", e);
