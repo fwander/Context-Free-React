@@ -1,18 +1,17 @@
-import { SetStateAction, useCallback, useEffect, useRef, useState, createContext, useContext, ComponentType, createRef, Ref } from "react";
+import { SetStateAction, useCallback, useEffect, useRef, useState, createContext, useContext, ComponentType, createRef, RefObject, MutableRefObject } from "react";
 import { AST_node, AST_root, {{start}}_node } from "./ast";
 import { {{start_comp}} } from "./components";
-import { FocusRoot, useFocus } from "./focus";
+import { FocusNode, FocusRoot, useFocus } from "./focus";
 import { DefaultChecker, Visitor } from "./visitor";
 import './lib.css'
 import './select.css'
 
 
 export function useFocusRef<T extends (HTMLElement)>(){
-  const [focus, _] = useContext(FocusContext);
-  const isFocused = focus === focus_root.current.get_rotation();
+  const focus = useContext(FocusContext);
   const ref = createRef<T>();
   useEffect(()=>{
-    if(isFocused){
+    if(focus?.current === focus_root.current.get_focused()){
       ref?.current?.focus();
     }
   });
@@ -23,14 +22,14 @@ export function useFocusRef<T extends (HTMLElement)>(){
 
 // TODO put these in a better place
 export class SelectInput {
-  constructor(names: string[], handleSelect: (name: string)=>void, isFocused: boolean){
+  constructor(names: string[], handleSelect: (name: string)=>void, isFocused: ()=>boolean){
     this.names = names;
     this.handleSelect = handleSelect;
     this.isFocused = isFocused;
   }
   names: string[];
   handleSelect: (name: string)=>void;
-  isFocused: boolean;
+  isFocused: ()=>boolean;
 }
 
 export class ListInput {
@@ -118,7 +117,7 @@ export const TextInput: React.FC<TextInputInput> = (props) => {
     props.setCurrent(val);
   }
 
-  const [focus,] = useContext(FocusContext);
+  const [focus,] = useFocus(false,focus_root.current);
 
   function submit(value: string){
     if(value.match(props.regex)){
@@ -127,18 +126,22 @@ export const TextInput: React.FC<TextInputInput> = (props) => {
     }
     setVal(value);
   }
-  return <div
-    onClick={(e)=>{e.stopPropagation();focus_root.current.set_rotation(focus);}}
-    onKeyDown={
-      (e)=>{
-        if (e.key == 'Escape' && props.setPrev){
-          props.setPrev(-1);
-          update_root();
+  return (
+  <FocusContext.Provider value={focus}>
+    <div
+      onClick={(e)=>{e.stopPropagation();focus_root.current.set_focused(focus?.current);}}
+      onKeyDown={
+        (e)=>{
+          if (e.key == 'Escape' && props.setPrev){
+            props.setPrev(-1);
+            update_root();
+          }
         }
-      }
-    }>
-    <props.Child {...new RegexInput(submit,val,ok!==null)}/>
+      }>
+      <props.Child {...new RegexInput(submit,val,ok!==null)}/>
     </div>
+  </FocusContext.Provider>
+  )
 }
 
 export class DefaultInput extends BaseComponent {
@@ -184,6 +187,7 @@ export class VariaticInput {
 export const Variatic: React.FC<VariaticInput> = (props) => { 
   const [elements, setElements] = useState<JSX.Element[]>([]);
   props.add_selection();
+  const setPrev = useContext(SelectionContext);
   function push(){
     setElements([...elements, props.getNth(elements.length)]);
     update_root();
@@ -197,19 +201,24 @@ export const Variatic: React.FC<VariaticInput> = (props) => {
     }
   }
   function handleKeyPress(event: React.KeyboardEvent<HTMLInputElement>){
-    console.log("press",event.key);
     switch (event.key){
       case "-":
         if (event.altKey) {
           pop()
           update_root();
-          if (focus !== focus_root.current.get_rotation())
-            focus_root.current.rotate(-1,false);
+          if (focus?.current !== focus_root.current.get_focused())
+            focus_root.current.go_left();
         }
         break;
       case "=":
         if (event.altKey) {
           push();
+          update_root();
+        }
+        break;
+      case "Escape":
+        if (focus?.current === focus_root.current.get_focused() && setPrev){
+          setPrev(-1);
           update_root();
         }
         break;
@@ -219,18 +228,24 @@ export const Variatic: React.FC<VariaticInput> = (props) => {
     event.stopPropagation();
   }
   useEffect(()=>{if (props.min === 1) push();},[])
-  const [focus, _] = useContext(FocusContext);
+  const [focus,] = useFocus(setPrev!==null,focus_root.current);
   const ref = useRef<HTMLInputElement>(null);
   useEffect(()=>{
       if (ref)
-      if((focus) === focus_root.current.get_rotation() && ref.current){
+      if((focus?.current) === focus_root.current.get_focused() && ref.current){
         ref.current.focus();
       }});
-  return <SelectionContext.Provider value = {null}>
-  <div ref={ref} tabIndex={-1} onKeyDown={handleKeyPress} onClick={(e)=>{e.stopPropagation()}}>
-    <props.Child {... new ListInput(elements,push,pop,props.virtical)}/>
-  </div>
-  </SelectionContext.Provider>
+  return (
+  <FocusContext.Provider value = {focus}>
+    <ParentFocusContext.Provider value = {focus}>
+      <SelectionContext.Provider value = {null}>
+        <div ref={ref} tabIndex={-1} onKeyDown={handleKeyPress} onClick={(e)=>{e.stopPropagation()}}>
+          <props.Child {... new ListInput(elements,push,pop,props.virtical)}/>
+        </div>
+      </SelectionContext.Provider>
+    </ParentFocusContext.Provider>
+  </FocusContext.Provider>
+  )
 }
 
 class BeforeInput {
@@ -290,7 +305,7 @@ export const Choice: React.FC<ChoiceInput> = (props) => {
   let [state, setState] = useState(props.start);
   const setPrev = useContext(SelectionContext);
   props.add_selection(state);
-  const [focus, _] = useContext(FocusContext);
+  const [focus,] = useFocus(setPrev!==null,focus_root.current);
   //TODO add option for type checking, you can keep a list of add functions and recursively look through children for props with a setCurrent function!
   function resetState() {
     setState(-1);
@@ -301,53 +316,63 @@ export const Choice: React.FC<ChoiceInput> = (props) => {
       if(setPrev) {
         setPrev(-1);
         update_root();
-        focus_root.current.rotate(-1, true, false);
+        focus_root.current.go_left(false);
       }
       return;
     }
+    //let force = props.outputs[ind].props.content === undefined;
     let ind = props.names.findIndex(x => x === name);
-    let force = props.outputs[ind].props.content === undefined;
     setState(ind);
     update_root();
-    focus_root.current.rotate(1, force);
+    focus_root.current.focus_newest();
   }
-  const isFocused = focus === focus_root.current.get_rotation();
+  function isFocused() {
+    return focus?.current === focus_root.current.get_focused();
+  }
   const ref = createRef<HTMLDivElement>();
   useEffect(()=>{
-    if(isFocused){
+    if(isFocused()){
       ref?.current?.focus();
     }
   });
   if (state > -1) {
   //TODO customized selected look
-    return <SelectionContext.Provider value = {setState}>
-    <div className="selected" tabIndex={-1} ref={ref}
-    onClick={(e)=>{
-      e.stopPropagation();
-      focus_root.current.set_rotation(focus);
-      if (isFocused)
-        resetState();
-    }}
-    onKeyDown={
-      (e)=>{
-        if (isFocused && e.key === 'Escape'){
-          resetState();
-        }
-      }
-    }>
-    {props.outputs[state]}
-    </div>
-    </SelectionContext.Provider>
+    return (
+    <ParentFocusContext.Provider value = {focus}>
+      <SelectionContext.Provider value = {setState}>
+        <div className="selected" tabIndex={-1} ref={ref}
+          onClick={(e)=>{
+            e.stopPropagation();
+            focus_root.current.set_focused(focus?.current);
+            if (isFocused())
+              resetState();
+          }}
+          onKeyDown={
+            (e)=>{
+              if (isFocused() && e.key === 'Escape'){
+                resetState();
+              }
+            }
+          }>
+          {props.outputs[state]}
+        </div>
+      </SelectionContext.Provider>
+    </ParentFocusContext.Provider>)
   }
   function grabFocus(){
-    focus_root.current.set_rotation(focus);
+    focus_root.current.set_focused(focus?.current);
   }
   let passing_names = props.names.map((x)=>x);
   if (setPrev !== null){
     passing_names.push("..");
   }
 
-  return <div onClick={(e)=>{e.stopPropagation(); grabFocus();}}><props.Child {...new SelectInput(passing_names,handleSelect,isFocused)}/></div>
+  return (
+    <FocusContext.Provider value = {focus}>
+      <div onClick={(e)=>{e.stopPropagation(); grabFocus();}}>
+        <props.Child {...new SelectInput(passing_names,handleSelect,isFocused)}/>
+      </div>
+    </FocusContext.Provider>)
 }
 
 export const SelectionContext = createContext<(((n: SetStateAction<number>)=>void)|null)>(null);
@@ -363,13 +388,20 @@ export const Focusable: React.FC<FocusableInput> = (props) => {
   const setPrev = useContext(SelectionContext);
   const override = setPrev? true: false;
   let [focus, parent_focus] = useFocus(override, focus_root.current);
-  if (props.push){
-    parent_focus = focus;
+  if (props.push && focus?.current){
+    parent_focus = focus as MutableRefObject<FocusNode>;
   }
-  return <FocusContext.Provider value = {[focus, parent_focus]}>{props.children}</FocusContext.Provider>;
+  return (
+  <FocusContext.Provider value = {focus}>
+    <ParentFocusContext.Provider value = {parent_focus}>
+      {props.children}
+    </ParentFocusContext.Provider>
+  </FocusContext.Provider>
+  ) ;
 }
 
-export const FocusContext = createContext<[number, number]>([-1,-1]);
+export const FocusContext = createContext<MutableRefObject<FocusNode|null>|null>(null);
+export const ParentFocusContext = createContext<RefObject<FocusNode>>(createRef());
 
 export let update_visual = ()=>{}
 export let update_root = ()=>{}
@@ -390,7 +422,6 @@ class RootInput{
 export const Root = ({update, checker} : RootInput): JSX.Element =>{
   focus_root = useRef(new FocusRoot());
   const [, updateState] = useState({});
-  const lowest_focus = useRef(-1);
   root = useRef(new AST_root(undefined));
   if (checker)
     get_checker = ()=>{return checker as Visitor<boolean>;}
@@ -403,9 +434,9 @@ export const Root = ({update, checker} : RootInput): JSX.Element =>{
   let expr = root.current;
   return <div onKeyDown={(e)=>{
     if (!e.ctrlKey && !e.altKey) return;
-    if(e.key === 'ArrowLeft' || e.key === 'k') {focus_root.current.rotate(-1, false);} 
-    else if (e.key === 'ArrowRight' || e.key === 'j') {focus_root.current.rotate(1,false);}}}
-    onClick={(e)=>{focus_root.current.set_rotation(-1); update_visual();}}
+    if(e.key === 'ArrowLeft' || e.key === 'k') {focus_root.current.go_left();} 
+    else if (e.key === 'ArrowRight' || e.key === 'j') {focus_root.current.go_right();}}}
+    onClick={(e)=>{focus_root.current.set_focused(null); update_visual();}}
     >
   <div className="program">
 <{{start_comp}} {...new ComponentInput(expr,[],new {{start}}_node(expr))}/>

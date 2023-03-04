@@ -62,7 +62,7 @@ const Select: React.FC<SelectInput> = (props) => {
 
   const ref = createRef<HTMLInputElement>();
   useEffect(()=>{
-    if(props.isFocused){
+    if(props.isFocused()){
       ref?.current?.focus();
     }
   });
@@ -75,7 +75,7 @@ const Select: React.FC<SelectInput> = (props) => {
     <input className="select-input" onClick={()=>{setTentative(0)}} style={ {width: width} } ref={ref} defaultValue={text} onChange={(e)=>{handleText(e.target.value)}} onKeyDown={handleKeyPress}/>
     <div className="select-options">
     {
-      (props.isFocused)?
+      (props.isFocused())?
         names.map((name) => 
         <option className="select-option" style={((i===tentative)? {backgroundColor: "rgb(221, 187, 229)"} : {backgroundColor: ""})} onClick={
         (e)=> {

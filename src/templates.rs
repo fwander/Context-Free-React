@@ -611,12 +611,12 @@ fn node_to_jsx(node: &ebnf::Node, name: &str, description: &config::NodeDescript
                 )
             }
             ebnf::Node::RegexString(s, _) => {
-                focus_format(&format!(
+                format!(
                     "<TextInput {{...new TextInputInput(expr,{},/^{}$/,{})}}/>",
                     list_to_str(mult_index),
                     s,
                     description.regex,
-                ),false)
+                )
             }
             ebnf::Node::Terminal(s, _) => {
                 format!(
@@ -676,21 +676,20 @@ fn node_to_jsx(node: &ebnf::Node, name: &str, description: &config::NodeDescript
                         let mut adding = mult_index.clone();
                         let last = 'n'.to_string() + &last_variatic.to_string();
                         adding.push(&(last));
-                        focus_format(&(format!("<Variatic {{...new VariaticInput((n{x}:number)=>{{\nreturn <div key={{n{x}}}>\n{body}</div>}},{min},{odd},()=>{{expr.add_selection([{args}],{depth})}},{format})}}/>\n" ,
+                        format!("<Variatic {{...new VariaticInput((n{x}:number)=>{{\nreturn <div key={{n{x}}}>\n{body}</div>}},{min},{odd},()=>{{expr.add_selection([{args}],{depth})}},{format})}}/>\n" ,
                             x = last_variatic,
                             body = &node_to_jsx_helper(n, &adding, last_variatic+1,false, description, 0),
                             args = &(0..last_variatic).fold("".to_string(), |c,n| c + &format!("n{n},")), 
                             depth = select_depth,
                             format = description.list,
                             odd = (last_variatic%2)==0,
-                            )), true)
+                            )
                     }
                 }
             }
             ebnf::Node::Symbol(_left, _kind, _right) => {
                 let v = alternation_to_list(node).unwrap();
-                    focus_format(
-                        &format!("<Choice\n{{...\nnew ChoiceInput((n:number)=>{{expr.add_selection([{vars}],{depth},n)}},[{names}],[{outputs}],{format})\n}}\n/>", 
+                        format!("<Choice\n{{...\nnew ChoiceInput((n:number)=>{{expr.add_selection([{vars}],{depth},n)}},[{names}],[{outputs}],{format})\n}}\n/>", 
                             format = description.choice,
                             names =  v.iter().fold("".to_string(), |c, n| c + "\"" + &node_to_string(n) + "\", "),
                             outputs = v.iter().fold("".to_string(), |c, n| 
@@ -705,7 +704,7 @@ fn node_to_jsx(node: &ebnf::Node, name: &str, description: &config::NodeDescript
                                     + ",\n"),
                             vars = &(0..last_variatic).fold("".to_string(), |c,n| c + &format!("n{n},")),
                             depth = select_depth,
-                        ) , true)
+                        )
             }
             ebnf::Node::Group(n, _) => node_to_jsx_helper(
                 n,
@@ -720,13 +719,12 @@ fn node_to_jsx(node: &ebnf::Node, name: &str, description: &config::NodeDescript
                     ebnf::Node::Terminal(s, _) => s.to_string(),
                     _ => "".to_string(),
                 };
-                focus_format(
-                    &format!("<Before {{...new BeforeInput(expr,{mult_index},'{name}', {choice_format}, {default_format})}}/>",
+                    format!("<Before {{...new BeforeInput(expr,{mult_index},'{name}', {choice_format}, {default_format})}}/>",
                     mult_index = list_to_str(mult_index),
                     name = name,
                     choice_format = description.choice,
                     default_format = description.terminal,
-                ), false)
+                )
             }
             ebnf::Node::Fmt(symbol) => match symbol.as_str() {
                 "n" => "</div>\n<div className=\"multiple\">".to_string(),
