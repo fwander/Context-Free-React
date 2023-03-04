@@ -866,11 +866,17 @@ fn expression_to_component(expression: &ebnf::Expression, description: &config::
     return node_to_jsx(&expression.rhs, &expression.lhs, description);
 }
 
+#[cfg(target_os = "windows")]
+const PATH_SEPARATOR: &str ="\\";
+
+#[cfg(not(target_os = "windows"))]
+const PATH_SEPARATOR: &str = "/";
+
 pub fn render_all(config: config::Config){
     let output_folder = config.dest.to_str().unwrap();
     let render_file = |name: &str, context: &Context|{
       fs::write(
-          &(output_folder.to_owned() + "/" + name),
+          &(output_folder.to_owned() + PATH_SEPARATOR + name),
           TERA.render(&("".to_string() + name), context)
               .unwrap(),
       )
