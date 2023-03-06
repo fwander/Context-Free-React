@@ -71,7 +71,7 @@ export class FocusNode {
 
 const no_focus = new FocusNode(()=>{});
 
-export function useFocus(override: boolean, focus_root: FocusRoot): [MutableRefObject<FocusNode>, RefObject<FocusNode>] {
+export function useFocus(override: boolean, focus_root: FocusRoot): [MutableRefObject<FocusNode>, RefObject<FocusNode>, {}] {
   const f = useRef<FocusNode>(no_focus);
   const [updating, updateState] = useState({});
   const parent_focus = useContext(ParentFocusContext);
@@ -82,19 +82,18 @@ export function useFocus(override: boolean, focus_root: FocusRoot): [MutableRefO
     f.current = focus_root.setup_focus(parent_focus.current, update);
     if (parent_focus.current) parent_focus.current.hidden = override;
     console.log("mount",f.current.to_string());
-    //updating = -1;
+    console.log("current focus:", focus_root.get_focused()?.to_string());
+    if (f.current === focus_root.get_focused()) {
+      focus_root.get_focused()?.render();
+    }
     return ()=>{
       console.log("unmount",f.current.to_string());
       if (f.current) focus_root.remove_focus(f.current);
-      if (parent_focus.current) parent_focus.current.hidden = override;
+      if (parent_focus.current) parent_focus.current.hidden = false;
       f.current = no_focus;
-      //updating = -1;
     }
   }, [])
-  useEffect(()=>{
-    console.log("updating", f.current.to_string());
-  },[updating]);
-  return [f, parent_focus];
+  return [f, parent_focus, updating];
 }
 
 export class FocusRoot{
@@ -150,6 +149,7 @@ export class FocusRoot{
     }
     if (this.focused === to_remove){
       this.focused = to_remove.get_prev();
+      this.focus_on_inserted = true;
     }
     to_remove.parent.children.splice(to_remove.index,1);
     for (let i = to_remove.index; i < to_remove.parent.children.length; i++) {

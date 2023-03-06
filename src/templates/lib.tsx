@@ -1,4 +1,4 @@
-import { SetStateAction, useCallback, useEffect, useRef, useState, createContext, useContext, ComponentType, createRef, RefObject, MutableRefObject } from "react";
+import { SetStateAction, useCallback, useEffect, useRef, useState, createContext, useContext, ComponentType, createRef, RefObject, MutableRefObject, useMemo } from "react";
 import { AST_node, AST_root, {{start}}_node } from "./ast";
 import { {{start_comp}} } from "./components";
 import { FocusNode, FocusRoot, useFocus } from "./focus";
@@ -305,7 +305,7 @@ export const Choice: React.FC<ChoiceInput> = (props) => {
   let [state, setState] = useState(props.start);
   const setPrev = useContext(SelectionContext);
   props.add_selection(state);
-  const [focus,] = useFocus(setPrev!==null,focus_root.current);
+  const [focus,,updating] = useFocus(setPrev!==null,focus_root.current);
   //TODO add option for type checking, you can keep a list of add functions and recursively look through children for props with a setCurrent function!
   function resetState() {
     setState(-1);
@@ -335,6 +335,7 @@ export const Choice: React.FC<ChoiceInput> = (props) => {
       ref?.current?.focus();
     }
   });
+  const output = useMemo(()=>{
   if (state > -1) {
   //TODO customized selected look
     return (
@@ -343,9 +344,9 @@ export const Choice: React.FC<ChoiceInput> = (props) => {
         <div className="selected" tabIndex={-1} ref={ref}
           onClick={(e)=>{
             e.stopPropagation();
-            focus_root.current.set_focused(focus?.current);
             if (isFocused())
               resetState();
+            focus_root.current.set_focused(focus?.current);
           }}
           onKeyDown={
             (e)=>{
@@ -358,6 +359,11 @@ export const Choice: React.FC<ChoiceInput> = (props) => {
         </div>
       </SelectionContext.Provider>
     </ParentFocusContext.Provider>)
+  }
+  return <></>;
+  },[state,updating]);
+  if (state > -1) {
+    return output;
   }
   function grabFocus(){
     focus_root.current.set_focused(focus?.current);
@@ -387,7 +393,7 @@ export class FocusableInput {
 export const Focusable: React.FC<FocusableInput> = (props) => {
   const setPrev = useContext(SelectionContext);
   const override = setPrev? true: false;
-  let [focus, parent_focus] = useFocus(override, focus_root.current);
+  let [focus, parent_focus,] = useFocus(override, focus_root.current);
   if (props.push && focus?.current){
     parent_focus = focus as MutableRefObject<FocusNode>;
   }
