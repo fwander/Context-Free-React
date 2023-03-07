@@ -248,7 +248,7 @@ export const Variatic: React.FC<VariaticInput> = (props) => {
   )
 }
 
-class BeforeInput {
+export class BeforeInput {
   constructor( parent: AST_node, nth: number[], looking_for: string, Child: ComponentType<SelectInput>, TerminalChild: ComponentType<TerminalInput>){
     this.parent = parent
     this.nth = nth
