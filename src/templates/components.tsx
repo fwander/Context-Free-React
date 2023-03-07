@@ -14,7 +14,7 @@ import VariableList from './VariableList';
 import Terminal from './Terminal';
 import Regex from './Regex';
 import { Visitor, DefaultChecker } from './visitor';
-import { Break, ComponentInput, Default, DefaultInput, Focusable, FocusableInput, TextInput, TextInputInput, Variatic, VariaticInput, Choice, ChoiceInput, } from './lib';
+import { Break, ComponentInput, Default, DefaultInput, Focusable, FocusableInput, TextInput, TextInputInput, Variatic, VariaticInput, Choice, ChoiceInput, BeforeInput } from './lib';
 import { update_root, update_visual, Before, SelectionContext } from './lib';
 import { useFocus } from './focus';
 
